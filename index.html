@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ライフプラン・シミュレーション 超詳細版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        input[type=range] { accent-color: #3b82f6; height: 6px; }
+        .mini-slider { accent-color: #10b981; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px;}
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        
+        /* アコーディオンのスタイル */
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] summary ~ * { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        details summary .fa-chevron-down { transition: transform 0.3s; }
+        details[open] summary .fa-chevron-down { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-2 md:p-6">
+
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+        
+        <!-- 左サイドバー：設定パネル -->
+        <div class="w-full lg:w-96 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:h-[calc(100vh-3rem)] lg:sticky lg:top-6">
+            <div class="p-4 border-b border-slate-100 flex-shrink-0 bg-slate-800 text-white rounded-t-2xl">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-blue-400 text-xl"></i>
+                    <h2 class="font-bold text-lg">超詳細シミュレーション条件</h2>
+                </div>
+            </div>
+            
+            <div class="p-4 overflow-y-auto custom-scrollbar flex-grow space-y-3">
+                <form id="settings-form" class="text-sm">
+                    
+                    <!-- 1. 基本設定 -->
+                    <details class="bg-slate-50 border border-slate-200 rounded-lg" open>
+                        <summary class="font-bold text-slate-700 p-3 flex justify-between items-center hover:bg-slate-100 rounded-lg">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-user text-emerald-500 w-5"></i> 基本設定(年齢・貯蓄)</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400"></i>
+                        </summary>
+                        <div class="p-3 pt-0 space-y-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">夫 現在年齢</label><span class="font-bold"><span id="val-h-current-age"></span>歳</span></div>
+                                    <input type="range" id="rg-h-current-age" min="20" max="60" step="1" value="25" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">妻 現在年齢</label><span class="font-bold"><span id="val-w-current-age"></span>歳</span></div>
+                                    <input type="range" id="rg-w-current-age" min="20" max="60" step="1" value="25" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-slate-500">初期貯蓄額(世帯)</label><span class="font-bold text-slate-700"><span id="val-init-savings"></span>万円</span></div>
+                                <input type="range" id="rg-init-savings" min="0" max="3000" step="50" value="400" class="w-full">
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- 2. 収入・働き方設定 -->
+                    <details class="bg-slate-50 border border-slate-200 rounded-lg mt-3" open>
+                        <summary class="font-bold text-slate-700 p-3 flex justify-between items-center hover:bg-slate-100 rounded-lg">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-briefcase text-blue-500 w-5"></i> 収入・働き方設定</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400"></i>
+                        </summary>
+                        <div class="p-3 pt-0 space-y-4">
+                            
+                            <!-- 夫の収入設定 -->
+                            <div class="space-y-2 border-l-2 border-blue-400 pl-2">
+                                <h4 class="font-bold text-slate-600 text-xs">夫の収入・働き方</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">現在年収</label><span class="font-bold"><span id="val-h-inc25"></span>万</span></div>
+                                        <input type="range" id="rg-h-inc25" min="200" max="1500" step="10" value="400" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">40歳時想定</label><span class="font-bold"><span id="val-h-inc40"></span>万</span></div>
+                                        <input type="range" id="rg-h-inc40" min="300" max="2000" step="10" value="650" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-1.5 bg-blue-50 rounded border border-blue-100">
+                                    <label class="text-blue-700 text-xs font-bold cursor-pointer" for="chk-h-change">働き方変更(減収/独立等)する</label>
+                                    <input type="checkbox" id="chk-h-change" class="w-3.5 h-3.5 accent-blue-600 rounded">
+                                </div>
+                                <div id="h-change-area" class="space-y-2 hidden">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">変更年齢</label><span class="font-bold"><span id="val-h-change-age"></span>歳</span></div>
+                                            <input type="range" id="rg-h-change-age" min="20" max="60" step="1" value="35" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">変更中年収</label><span class="font-bold"><span id="val-h-inc-after"></span>万</span></div>
+                                            <input type="range" id="rg-h-inc-after" min="0" max="1500" step="10" value="200" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between p-1.5 border-t border-slate-200 mt-1">
+                                        <label class="text-slate-600 text-xs font-bold cursor-pointer" for="chk-h-return">再び働き方を変える(年収増)</label>
+                                        <input type="checkbox" id="chk-h-return" class="w-3.5 h-3.5 accent-blue-600 rounded">
+                                    </div>
+                                    <div id="h-return-area" class="grid grid-cols-2 gap-2 hidden">
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">復帰年齢</label><span class="font-bold"><span id="val-h-return-age"></span>歳</span></div>
+                                            <input type="range" id="rg-h-return-age" min="20" max="60" step="1" value="40" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">復帰後年収</label><span class="font-bold"><span id="val-h-return-inc"></span>万</span></div>
+                                            <input type="range" id="rg-h-return-inc" min="100" max="2000" step="10" value="500" class="w-full mini-slider" style="accent-color:#3b82f6;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 妻の収入設定 -->
+                            <div class="space-y-2 border-l-2 border-pink-400 pl-2">
+                                <h4 class="font-bold text-slate-600 text-xs">妻の収入・働き方</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">現在年収</label><span class="font-bold"><span id="val-w-inc25"></span>万</span></div>
+                                        <input type="range" id="rg-w-inc25" min="200" max="1500" step="10" value="400" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">40歳時想定</label><span class="font-bold"><span id="val-w-inc40"></span>万</span></div>
+                                        <input type="range" id="rg-w-inc40" min="300" max="2000" step="10" value="400" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between p-1.5 bg-pink-50 rounded border border-pink-100">
+                                    <label class="text-pink-700 text-xs font-bold cursor-pointer" for="chk-w-change">働き方変更(減収等)する</label>
+                                    <input type="checkbox" id="chk-w-change" class="w-3.5 h-3.5 accent-pink-600 rounded" checked>
+                                </div>
+                                <div id="w-change-area" class="space-y-2">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">変更年齢</label><span class="font-bold"><span id="val-w-change-age"></span>歳</span></div>
+                                            <input type="range" id="rg-w-change-age" min="20" max="60" step="1" value="28" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">変更中(パート等)</label><span class="font-bold"><span id="val-w-inc-after"></span>万</span></div>
+                                            <input type="range" id="rg-w-inc-after" min="0" max="1000" step="10" value="100" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between p-1.5 border-t border-slate-200 mt-1">
+                                        <label class="text-slate-600 text-xs font-bold cursor-pointer" for="chk-w-return">職場復帰(年収増)する</label>
+                                        <input type="checkbox" id="chk-w-return" class="w-3.5 h-3.5 accent-pink-600 rounded">
+                                    </div>
+                                    <div id="w-return-area" class="grid grid-cols-2 gap-2 hidden">
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">復帰年齢</label><span class="font-bold"><span id="val-w-return-age"></span>歳</span></div>
+                                            <input type="range" id="rg-w-return-age" min="20" max="60" step="1" value="35" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                        </div>
+                                        <div>
+                                            <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">復帰後年収</label><span class="font-bold"><span id="val-w-return-inc"></span>万</span></div>
+                                            <input type="range" id="rg-w-return-inc" min="100" max="1500" step="10" value="400" class="w-full mini-slider" style="accent-color:#ec4899;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- 3. 基本生活費 -->
+                    <details class="bg-slate-50 border border-slate-200 rounded-lg mt-3">
+                        <summary class="font-bold text-slate-700 p-3 flex justify-between items-center hover:bg-slate-100 rounded-lg">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-cart-shopping text-orange-500 w-5"></i> 生活費 (計: <span id="display-total-living" class="text-orange-600">--</span>万/月)</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400"></i>
+                        </summary>
+                        <div class="p-3 pt-0 grid grid-cols-1 gap-3">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">食費・外食</label><span class="font-semibold"><span id="val-lv-food"></span>万円</span></div>
+                                <input type="range" id="rg-lv-food" min="3" max="15" step="1" value="6" class="w-full mini-slider" style="accent-color:#f97316;">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">水道光熱費</label><span class="font-semibold"><span id="val-lv-util"></span>万円</span></div>
+                                <input type="range" id="rg-lv-util" min="1" max="5" step="0.5" value="2" class="w-full mini-slider" style="accent-color:#f97316;">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">通信費</label><span class="font-semibold"><span id="val-lv-comm"></span>万円</span></div>
+                                <input type="range" id="rg-lv-comm" min="0.5" max="4" step="0.5" value="1.5" class="w-full mini-slider" style="accent-color:#f97316;">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">保険料</label><span class="font-semibold"><span id="val-lv-ins"></span>万円</span></div>
+                                <input type="range" id="rg-lv-ins" min="0" max="10" step="1" value="2" class="w-full mini-slider" style="accent-color:#f97316;">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">お小遣い</label><span class="font-semibold"><span id="val-lv-pocket"></span>万円</span></div>
+                                <input type="range" id="rg-lv-pocket" min="2" max="15" step="1" value="6" class="w-full mini-slider" style="accent-color:#f97316;">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">日用品・雑費</label><span class="font-semibold"><span id="val-lv-other"></span>万円</span></div>
+                                <input type="range" id="rg-lv-other" min="2" max="15" step="1" value="4" class="w-full mini-slider" style="accent-color:#f97316;">
+                            </div>
+                            <p class="text-[10px] text-slate-400 leading-tight">※子供成長に伴う加算は別途自動計算されます。</p>
+                        </div>
+                    </details>
+
+                    <!-- 4. 住宅・車・特別費 -->
+                    <details class="bg-slate-50 border border-slate-200 rounded-lg mt-3" open>
+                        <summary class="font-bold text-slate-700 p-3 flex justify-between items-center hover:bg-slate-100 rounded-lg">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-house-chimney text-red-500 w-5"></i> 住宅・車・特別費</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400"></i>
+                        </summary>
+                        <div class="p-3 pt-0 space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">購入前の家賃(月額)</label><span class="font-bold"><span id="val-rent-monthly"></span>万円</span></div>
+                                <input type="range" id="rg-rent-monthly" min="0" max="30" step="1" value="10" class="w-full mini-slider" style="accent-color:#ef4444;">
+                            </div>
+                            <hr class="border-slate-200 border-dashed">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">住宅購入(夫年齢)</label><span class="font-bold"><span id="val-housing-age"></span>歳</span></div>
+                                    <input type="range" id="rg-housing-age" min="20" max="60" step="1" value="32" class="w-full mini-slider" style="accent-color:#ef4444;">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">住宅金利(%)</label><span class="font-bold"><span id="val-housing-rate"></span>%</span></div>
+                                    <input type="range" id="rg-housing-rate" min="0.1" max="3.0" step="0.1" value="1.0" class="w-full mini-slider" style="accent-color:#ef4444;">
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1 text-red-600"><label class="font-medium">物件価格(総額)</label><span class="font-bold"><span id="val-housing-price"></span>万円</span></div>
+                                <input type="range" id="rg-housing-price" min="0" max="15000" step="100" value="8000" class="w-full mini-slider" style="accent-color:#ef4444;">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">ローン年数</label><span class="font-bold"><span id="val-housing-years"></span>年</span></div>
+                                    <input type="range" id="rg-housing-years" min="10" max="50" step="1" value="35" class="w-full mini-slider" style="accent-color:#ef4444;">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">用意する頭金</label><span class="font-bold"><span id="val-housing-down"></span>万円</span></div>
+                                    <input type="range" id="rg-housing-down" min="0" max="5000" step="100" value="0" class="w-full mini-slider" style="accent-color:#ef4444;">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <div>
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">諸経費(価格比%)</label><span class="font-bold"><span id="val-housing-fees-rate"></span>%</span></div>
+                                    <input type="range" id="rg-housing-fees-rate" min="0" max="15" step="1" value="6" class="w-full mini-slider" style="accent-color:#ef4444;">
+                                </div>
+                                <div class="flex items-end pb-1">
+                                    <label class="flex items-center gap-1 cursor-pointer text-xs text-red-700 font-bold bg-red-50 p-1.5 rounded border border-red-200 w-full justify-center hover:bg-red-100 transition-colors">
+                                        <input type="checkbox" id="chk-fees-in-loan" class="w-3.5 h-3.5 accent-red-600 rounded">
+                                        ローンに含む
+                                    </label>
+                                </div>
+                            </div>
+                            <hr class="border-slate-200 border-dashed mt-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">車初回購入(夫年齢)</label><span class="font-bold"><span id="val-car-start-age"></span>歳</span></div>
+                                    <input type="range" id="rg-car-start-age" min="20" max="60" step="1" value="25" class="w-full mini-slider" style="accent-color:#8b5cf6;">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">購入予算(1台分)</label><span class="font-bold"><span id="val-car-price"></span>万円</span></div>
+                                    <input type="range" id="rg-car-price" min="0" max="800" step="50" value="0" class="w-full mini-slider" style="accent-color:#8b5cf6;">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">買替サイクル</label><span class="font-bold"><span id="val-car-cycle"></span>年</span></div>
+                                    <input type="range" id="rg-car-cycle" min="5" max="15" step="1" value="10" class="w-full mini-slider" style="accent-color:#8b5cf6;">
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">年間維持費(万/年)</label><span class="font-bold"><span id="val-car-maint"></span>万</span></div>
+                                    <input type="range" id="rg-car-maint" min="0" max="50" step="5" value="0" class="w-full mini-slider" style="accent-color:#8b5cf6;">
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-slate-500">毎年の旅行・帰省費</label><span class="font-bold"><span id="val-sp-yearly"></span>万円</span></div>
+                                <input type="range" id="rg-sp-yearly" min="0" max="100" step="5" value="20" class="w-full mini-slider" style="accent-color:#8b5cf6;">
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- 5. 家族・教育費 -->
+                    <details class="bg-slate-50 border border-slate-200 rounded-lg mt-3" open>
+                        <summary class="font-bold text-slate-700 p-3 flex justify-between items-center hover:bg-slate-100 rounded-lg">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i> 家族・教育費</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400"></i>
+                        </summary>
+                        <div class="p-3 pt-0 space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-500">子供の人数</label><span class="font-bold"><span id="val-child-count"></span>人</span></div>
+                                <input type="range" id="rg-child-count" min="0" max="3" step="1" value="2" class="w-full mini-slider" style="accent-color:#6366f1;">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div id="area-child1" class="hidden">
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">1子誕生(夫齢)</label><span class="font-bold"><span id="val-child1-age"></span>歳</span></div>
+                                    <input type="range" id="rg-child1-age" min="20" max="50" step="1" value="27" class="w-full mini-slider" style="accent-color:#6366f1;">
+                                </div>
+                                <div id="area-child2" class="hidden">
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">2子誕生(夫齢)</label><span class="font-bold"><span id="val-child2-age"></span>歳</span></div>
+                                    <input type="range" id="rg-child2-age" min="20" max="50" step="1" value="29" class="w-full mini-slider" style="accent-color:#6366f1;">
+                                </div>
+                                <div id="area-child3" class="hidden">
+                                    <div class="flex justify-between text-[10px] mb-1"><label class="text-slate-500">3子誕生(夫齢)</label><span class="font-bold"><span id="val-child3-age"></span>歳</span></div>
+                                    <input type="range" id="rg-child3-age" min="20" max="50" step="1" value="31" class="w-full mini-slider" style="accent-color:#6366f1;">
+                                </div>
+                            </div>
+                            <hr class="border-slate-200 border-dashed">
+                            <div>
+                                <div class="flex justify-between mb-1"><label class="text-slate-500">習い事・塾 (月額/1人)</label><span class="font-bold"><span id="val-edu-lesson"></span>万円</span></div>
+                                <input type="range" id="rg-edu-lesson" min="0" max="10" step="0.5" value="1.5" class="w-full mini-slider" style="accent-color:#6366f1;">
+                                <p class="text-[10px] text-slate-400 mt-1">※小学生〜高校生の間、毎月かかると想定</p>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">大学初年度(入学金等/1人)</label><span class="font-semibold"><span id="val-edu-uni-init"></span>万円</span></div>
+                                <input type="range" id="rg-edu-uni-init" min="50" max="500" step="10" value="200" class="w-full mini-slider" style="accent-color:#6366f1;">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><label class="text-slate-600">大学在学費用(年間/1人)</label><span class="font-semibold"><span id="val-edu-uni-year"></span>万円</span></div>
+                                <input type="range" id="rg-edu-uni-year" min="50" max="400" step="10" value="150" class="w-full mini-slider" style="accent-color:#6366f1;">
+                            </div>
+                        </div>
+                    </details>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- 右側：ダッシュボード -->
+        <div class="flex-grow space-y-4 min-w-0">
+            
+            <!-- サマリーカード -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-red-400 flex flex-col justify-center">
+                    <p class="text-xs text-slate-500 font-medium">住宅ローン概算 (月額)</p>
+                    <p class="text-xl font-bold mt-1 text-slate-700" id="summary-loan">計算中...</p>
+                    <p class="text-[10px] text-slate-400 mt-1" id="summary-loan-detail"></p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500 flex flex-col justify-center">
+                    <p class="text-xs text-slate-500 font-medium">シミュレーション完了時点の貯蓄</p>
+                    <p class="text-2xl font-bold mt-1" id="summary-final-savings">計算中...</p>
+                </div>
+                <div id="alert-card" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 flex flex-col justify-center">
+                    <p class="text-xs text-slate-500 font-medium">家計の安全性 (資金ショート判定)</p>
+                    <p id="summary-alert" class="text-xl font-bold mt-1">計算中...</p>
+                </div>
+            </div>
+
+            <!-- グラフエリア -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <div class="relative h-[280px] md:h-[320px] w-full">
+                    <canvas id="lifeplanChart"></canvas>
+                </div>
+            </div>
+
+            <!-- データテーブル -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700 text-sm"><i class="fa-solid fa-table-list mr-2"></i>年齢別 収支詳細 (単位: 万円)</h3>
+                    <button onclick="downloadCSV()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center shadow-sm">
+                        <i class="fa-solid fa-download mr-1"></i> CSV
+                    </button>
+                </div>
+                <div class="overflow-x-auto h-[350px] custom-scrollbar">
+                    <table class="w-full text-[11px] md:text-xs text-left whitespace-nowrap relative">
+                        <thead class="text-[10px] text-slate-500 bg-white uppercase sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-2 py-2 font-medium border-b sticky left-0 bg-white z-20 whitespace-nowrap">夫齢 / 妻齢</th>
+                                <th class="px-2 py-2 font-medium border-b text-blue-600 bg-blue-50/30">夫手取り</th>
+                                <th class="px-2 py-2 font-medium border-b text-pink-600 bg-pink-50/30">妻手取り</th>
+                                <th class="px-2 py-2 font-medium border-b font-bold">世帯収入</th>
+                                <th class="px-2 py-2 font-medium border-b text-orange-600">基本生活</th>
+                                <th class="px-2 py-2 font-medium border-b text-red-600">住居費</th>
+                                <th class="px-2 py-2 font-medium border-b text-indigo-600">教育費</th>
+                                <th class="px-2 py-2 font-medium border-b text-purple-600">車・特別費</th>
+                                <th class="px-2 py-2 font-medium border-b font-bold">総支出</th>
+                                <th class="px-2 py-2 font-medium border-b">年間収支</th>
+                                <th class="px-2 py-2 font-medium border-b text-emerald-600">貯蓄残高</th>
+                                <th class="px-2 py-2 font-medium border-b">ライフイベント</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-100">
+                            <!-- JSで生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let myChart = null;
+        let simulationData = [];
+
+        // UIと値のバインディング用配列
+        const inputs = [
+            'h-current-age', 'w-current-age', 'init-savings', 
+            'lv-food', 'lv-util', 'lv-comm', 'lv-ins', 'lv-pocket', 'lv-other',
+            'h-inc25', 'h-inc40', 'h-change-age', 'h-inc-after', 'h-return-age', 'h-return-inc',
+            'w-inc25', 'w-inc40', 'w-change-age', 'w-inc-after', 'w-return-age', 'w-return-inc',
+            'child-count', 'child1-age', 'child2-age', 'child3-age', 'rent-monthly', 'housing-age', 'housing-price', 'housing-rate', 'housing-down', 'housing-years', 'housing-fees-rate',
+            'car-start-age', 'car-price', 'car-cycle', 'car-maint', 'sp-yearly',
+            'edu-lesson', 'edu-uni-init', 'edu-uni-year'
+        ];
+
+        function init() {
+            inputs.forEach(id => {
+                const range = document.getElementById(`rg-${id}`);
+                const valDisplay = document.getElementById(`val-${id}`);
+                if(range && valDisplay) {
+                    valDisplay.innerText = range.value;
+                    range.addEventListener('input', (e) => {
+                        valDisplay.innerText = e.target.value;
+                        if (id === 'child-count') updateChildVisibility();
+                        updateDashboard();
+                    });
+                }
+            });
+
+            // 夫と妻の働き方変更・復帰チェックボックスのイベント設定
+            ['h', 'w'].forEach(prefix => {
+                const chkChange = document.getElementById(`chk-${prefix}-change`);
+                const chkReturn = document.getElementById(`chk-${prefix}-return`);
+                
+                if (chkChange) {
+                    chkChange.addEventListener('change', () => {
+                        const area = document.getElementById(`${prefix}-change-area`);
+                        if (area) area.style.display = chkChange.checked ? 'block' : 'none';
+                        updateDashboard();
+                    });
+                    // 初期状態の反映
+                    const area = document.getElementById(`${prefix}-change-area`);
+                    if (area) area.style.display = chkChange.checked ? 'block' : 'none';
+                }
+                
+                if (chkReturn) {
+                    chkReturn.addEventListener('change', () => {
+                        const area = document.getElementById(`${prefix}-return-area`);
+                        if (area) area.style.display = chkReturn.checked ? 'grid' : 'none';
+                        updateDashboard();
+                    });
+                    const area = document.getElementById(`${prefix}-return-area`);
+                    if (area) area.style.display = chkReturn.checked ? 'grid' : 'none';
+                }
+            });
+            
+            const chkFees = document.getElementById('chk-fees-in-loan');
+            if (chkFees) chkFees.addEventListener('change', updateDashboard);
+
+            updateChildVisibility();
+            updateDashboard();
+        }
+
+        function updateChildVisibility() {
+            const countEl = document.getElementById('rg-child-count');
+            const count = countEl ? Number(countEl.value) : 0;
+            const area1 = document.getElementById('area-child1');
+            const area2 = document.getElementById('area-child2');
+            const area3 = document.getElementById('area-child3');
+            if (area1) area1.style.display = count >= 1 ? 'block' : 'none';
+            if (area2) area2.style.display = count >= 2 ? 'block' : 'none';
+            if (area3) area3.style.display = count >= 3 ? 'block' : 'none';
+        }
+
+        // 収入計算の汎用関数
+        function calcIncome(baseAge, age, incCurrent, inc40, isChange, changeAge, incAfter, isReturn, returnAge, returnInc, isMaternity) {
+            let inc = incCurrent;
+            
+            // ベース収入のカーブ (25歳未満でも、現在年齢から40歳への上昇とみなす)
+            if (baseAge < 40 && age <= 40) {
+                // baseAgeと40歳が同じ場合はゼロ除算回避
+                const range = 40 - baseAge === 0 ? 1 : 40 - baseAge; 
+                inc = incCurrent + ((inc40 - incCurrent) / range) * (age - baseAge);
+            } else if (baseAge < 40 && age > 40) {
+                inc = inc40 + 10 * (age - 40); // 40歳以降は緩やかに上昇(+10万/年)
+            } else {
+                inc = incCurrent + 10 * (age - baseAge); // スタートが40歳以上の場合
+            }
+
+            // 働き方の変更
+            if (isChange && age >= changeAge) {
+                inc = incAfter;
+            }
+
+            // 職場復帰
+            if (isChange && isReturn && age >= returnAge) {
+                inc = returnInc;
+            }
+
+            // 育休等による一時的な収入減 (妻用)
+            if (isMaternity) {
+                inc = Math.min(inc, incCurrent * 0.5); // 元の年収の半額を上限とする
+            }
+
+            return Math.round(inc);
+        }
+
+        function updateDashboard() {
+            const p = {};
+            inputs.forEach(id => { 
+                const el = document.getElementById(`rg-${id}`);
+                p[id] = el ? Number(el.value) : 0;
+            });
+
+            // 生活費合計UI更新
+            const baseLivingMonthly = (p['lv-food'] || 0) + (p['lv-util'] || 0) + (p['lv-comm'] || 0) + (p['lv-ins'] || 0) + (p['lv-pocket'] || 0) + (p['lv-other'] || 0);
+            const displayTotalLiving = document.getElementById('display-total-living');
+            if (displayTotalLiving) displayTotalLiving.innerText = baseLivingMonthly.toFixed(1);
+
+            simulationData = [];
+            let currentSavings = p['init-savings'];
+            let shortageAge = null;
+            let loanMonthly = 0;
+            let borrowAmount = 0;
+
+            const isFeesInLoanEl = document.getElementById('chk-fees-in-loan');
+            const isFeesInLoan = isFeesInLoanEl ? isFeesInLoanEl.checked : false;
+            let fees = Math.round(p['housing-price'] * (p['housing-fees-rate'] / 100));
+
+            // 住宅ローン計算
+            if (p['housing-price'] > 0) {
+                let totalCostForLoan = p['housing-price'] + (isFeesInLoan ? fees : 0);
+                borrowAmount = Math.max(0, totalCostForLoan - p['housing-down']) * 10000;
+                const r = (p['housing-rate'] / 100) / 12; // 月利
+                const n = p['housing-years'] * 12; // 指定年数
+                if (borrowAmount > 0) {
+                    loanMonthly = r === 0 ? borrowAmount / n : (borrowAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+                }
+            }
+
+            // チェックボックスの状態取得
+            const isHChange = document.getElementById('chk-h-change')?.checked;
+            const isHReturn = document.getElementById('chk-h-return')?.checked;
+            const isWChange = document.getElementById('chk-w-change')?.checked;
+            const isWReturn = document.getElementById('chk-w-return')?.checked;
+
+            let hCurrentAge = p['h-current-age'] || 25;
+            let wCurrentAge = p['w-current-age'] || 25;
+            let endAge = hCurrentAge + 35; // 夫の年齢を基準に35年後まで計算
+
+            for (let hAge = hCurrentAge; hAge <= endAge; hAge++) {
+                let wAge = hAge - hCurrentAge + wCurrentAge; // 妻のその年の年齢
+                
+                // --- 1. 収入計算 ---
+                let isMaternityLeave = false;
+                for (let i = 1; i <= p['child-count']; i++) {
+                    let cAge = p[`child${i}-age`]; // 子供誕生は「夫年齢」基準で入力させている
+                    if (hAge === cAge || hAge === cAge + 1) isMaternityLeave = true;
+                }
+
+                // 夫の収入
+                let hIncGross = calcIncome(hCurrentAge, hAge, p['h-inc25'], p['h-inc40'], isHChange, p['h-change-age'], p['h-inc-after'], isHReturn, p['h-return-age'], p['h-return-inc'], false);
+                let hNet = Math.round(hIncGross * 0.8);
+                
+                // 妻の収入
+                let wIncGross = calcIncome(wCurrentAge, wAge, p['w-inc25'], p['w-inc40'], isWChange, p['w-change-age'], p['w-inc-after'], isWReturn, p['w-return-age'], p['w-return-inc'], isMaternityLeave);
+                let wNet = Math.round(wIncGross > 130 ? wIncGross * 0.8 : wIncGross); // 130万以下は手取りそのまま想定
+                
+                let netInc = hNet + wNet;
+
+                // --- 2. 支出計算 ---
+                // 【基本生活費】
+                let livingCostYear = baseLivingMonthly * 12;
+                for (let i = 1; i <= p['child-count']; i++) {
+                    let cAge = p[`child${i}-age`]; // 夫年齢基準
+                    if (hAge >= cAge) livingCostYear += 36;
+                    if (hAge >= cAge + 13) livingCostYear += 24;
+                }
+                livingCostYear = Math.round(livingCostYear);
+
+                // 【住居費】
+                let housingCostYear = p['rent-monthly'] * 12; // 賃貸時
+                let events = [];
+                let isHousingEvent = false;
+
+                if (hAge === p['housing-age'] && p['housing-price'] > 0) {
+                    let initialCost = p['housing-down'] + (isFeesInLoan ? 0 : fees);
+                    housingCostYear = Math.round((loanMonthly * 12) / 10000) + 60 + initialCost; 
+                    
+                    let eventText = `🏡家購入(頭金${p['housing-down']}万`;
+                    if (!isFeesInLoan && fees > 0) eventText += `+諸経費${fees}万`;
+                    eventText += `)`;
+                    events.push(eventText);
+                    isHousingEvent = true;
+                } else if (hAge > p['housing-age']) {
+                    housingCostYear = Math.round((loanMonthly * 12) / 10000) + 60; // ローン+維持税金(60万)
+                }
+
+                // 【車・特別費】
+                let carAndSpecialCost = p['sp-yearly']; 
+                if (p['car-price'] > 0 && hAge >= p['car-start-age'] && (hAge - p['car-start-age']) % p['car-cycle'] === 0) {
+                    carAndSpecialCost += p['car-price']; 
+                    events.push(`🚗車購入(${p['car-price']}万)`);
+                }
+                if (p['car-price'] > 0 && hAge >= p['car-start-age']) {
+                    carAndSpecialCost += p['car-maint']; 
+                }
+
+                // 【教育費】
+                let eduCost = 0;
+                const calcEdu = (c_age, name) => { // c_ageは夫年齢
+                    if (hAge === c_age) { eduCost += 40; events.push(`👶 ${name}誕生`); }
+                    if (hAge >= c_age + 6 && hAge <= c_age + 17) { eduCost += Math.round(p['edu-lesson'] * 12); }
+                    if (hAge === c_age + 12) { eduCost += 50; events.push(`${name}中入学`); }
+                    if (hAge === c_age + 15) { eduCost += 50; events.push(`${name}高入学`); }
+                    if (hAge === c_age + 18) { 
+                        eduCost += p['edu-uni-init']; 
+                        events.push(`🎓 ${name}大入学(${p['edu-uni-init']}万)`); 
+                    }
+                    if (hAge >= c_age + 19 && hAge <= c_age + 21) { 
+                        eduCost += p['edu-uni-year']; 
+                        events.push(`${name}大在学`);
+                    }
+                };
+
+                for (let i = 1; i <= p['child-count']; i++) {
+                    calcEdu(p[`child${i}-age`], `第${i}子`);
+                }
+
+                let totalExpense = livingCostYear + housingCostYear + eduCost + carAndSpecialCost;
+                let balance = netInc - totalExpense;
+                currentSavings += balance;
+
+                if (currentSavings < 0 && shortageAge === null) shortageAge = hAge;
+
+                // グラフ用（突出する頭金等は除外）
+                let graphHousingCost = isHousingEvent ? Math.round((loanMonthly * 12) / 10000) + 60 : housingCostYear;
+
+                simulationData.push({
+                    hAge, wAge, hNet, wNet, netInc, 
+                    livingCostYear, housingCostYear, graphHousingCost, eduCost, carAndSpecialCost, 
+                    totalExpense, balance, savings: currentSavings,
+                    eventName: events.length > 0 ? events.join(" / ") : "-"
+                });
+            }
+
+            if (simulationData.length > 0) {
+                updateSummary(shortageAge, loanMonthly, borrowAmount, p['housing-rate'], p['housing-years'], simulationData[simulationData.length - 1].savings);
+            }
+            renderTable();
+            renderChart();
+        }
+
+        function updateSummary(shortageAge, loanMonthly, borrowAmount, rate, years, finalSavings) {
+            const loanDisplay = document.getElementById('summary-loan');
+            const loanDetail = document.getElementById('summary-loan-detail');
+            if (loanDisplay && loanDetail) {
+                if(loanMonthly > 0) {
+                    loanDisplay.innerText = `約 ${(loanMonthly/10000).toFixed(1)} 万円 / 月`;
+                    loanDetail.innerText = `借入: ${(borrowAmount/10000).toLocaleString()}万円 / 金利: ${rate}% / ${years}年`;
+                } else {
+                    loanDisplay.innerText = "なし";
+                    loanDetail.innerText = "-";
+                }
+            }
+
+            const finalDisplay = document.getElementById('summary-final-savings');
+            if (finalDisplay) {
+                finalDisplay.innerText = `${finalSavings.toLocaleString()} 万円`;
+                finalDisplay.className = finalSavings < 0 ? "text-2xl font-bold mt-1 text-red-600" : "text-2xl font-bold mt-1 text-emerald-600";
+            }
+
+            const alertCard = document.getElementById('alert-card');
+            const alertText = document.getElementById('summary-alert');
+            
+            if (alertCard && alertText) {
+                alertCard.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 flex flex-col justify-center";
+                if (shortageAge) {
+                    alertCard.classList.add('border-l-red-500', 'bg-red-50');
+                    alertText.innerText = `⚠️ 夫${shortageAge}歳で資金ショート`;
+                    alertText.className = "text-xl font-bold mt-1 text-red-600";
+                } else {
+                    alertCard.classList.add('border-l-emerald-500');
+                    alertText.innerText = `✅ 黒字維持クリア！`;
+                    alertText.className = "text-xl font-bold mt-1 text-emerald-600";
+                }
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            if (!tbody) return;
+            tbody.innerHTML = ''; 
+
+            simulationData.forEach(data => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-100 transition-colors";
+                
+                const balanceColor = data.balance < 0 ? "text-red-500 font-medium" : "text-emerald-600 font-medium";
+                const savingsColor = data.savings < 0 ? "text-red-600 font-bold bg-red-100 px-1 rounded" : "text-slate-800 font-bold";
+                const eventStyle = data.eventName !== "-" ? "font-bold text-slate-800" : "text-slate-400";
+
+                tr.innerHTML = `
+                    <td class="px-2 py-1.5 border-b border-slate-100 font-bold text-slate-700 bg-white sticky left-0 z-10 whitespace-nowrap">${data.hAge} / ${data.wAge}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-blue-700 bg-blue-50/30">${data.hNet.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-pink-700 bg-pink-50/30">${data.wNet.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 font-bold">${data.netInc.toLocaleString()}</td>
+                    
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-orange-700">${data.livingCostYear.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-red-700">${data.housingCostYear.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-indigo-700">${data.eduCost.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-purple-700">${data.carAndSpecialCost.toLocaleString()}</td>
+                    
+                    <td class="px-2 py-1.5 border-b border-slate-100 font-bold">${data.totalExpense.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 ${balanceColor}">${data.balance > 0 ? '+' : ''}${data.balance.toLocaleString()}</td>
+                    <td class="px-2 py-1.5 border-b border-slate-100"><span class="${savingsColor}">${data.savings.toLocaleString()}</span></td>
+                    <td class="px-2 py-1.5 border-b border-slate-100 text-[10px]"><span class="${eventStyle}">${data.eventName}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderChart() {
+            const chartCanvas = document.getElementById('lifeplanChart');
+            if (!chartCanvas) return;
+            if (myChart) myChart.destroy();
+
+            const ctx = chartCanvas.getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: simulationData.map(d => `${d.hAge}歳`),
+                    datasets: [
+                        {
+                            label: '貯蓄残高',
+                            data: simulationData.map(d => d.savings),
+                            type: 'line',
+                            borderColor: '#10b981', 
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 1,
+                            yAxisID: 'y-savings',
+                            fill: true,
+                            tension: 0.3,
+                            order: 1
+                        },
+                        {
+                            label: '世帯手取り',
+                            data: simulationData.map(d => d.netInc),
+                            type: 'line',
+                            borderColor: '#3b82f6',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            pointRadius: 0,
+                            yAxisID: 'y-amount',
+                            order: 2
+                        },
+                        // 支出を積み上げグラフで表示
+                        {
+                            label: '基本生活費',
+                            data: simulationData.map(d => d.livingCostYear),
+                            backgroundColor: '#fb923c', yAxisID: 'y-amount', stack: 'Stack 0', order: 3
+                        },
+                        {
+                            label: '住居費(平時)',
+                            data: simulationData.map(d => d.graphHousingCost), // 突出する頭金等はグラフからは除外
+                            backgroundColor: '#f87171', yAxisID: 'y-amount', stack: 'Stack 0', order: 4
+                        },
+                        {
+                            label: '教育費',
+                            data: simulationData.map(d => d.eduCost),
+                            backgroundColor: '#818cf8', yAxisID: 'y-amount', stack: 'Stack 0', order: 5
+                        },
+                        {
+                            label: '車・特別費',
+                            data: simulationData.map(d => d.carAndSpecialCost),
+                            backgroundColor: '#c084fc', yAxisID: 'y-amount', stack: 'Stack 0', order: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 10, font: {size: 10} } },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const event = simulationData[index].eventName;
+                                    return event !== "-" ? '\nイベント:\n' + event : '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        'y-amount': {
+                            type: 'linear', position: 'left', stacked: true,
+                            title: { display: true, text: '金額(万円)', font: {size: 10} },
+                            grid: { borderDash: [4, 4] }
+                        },
+                        'y-savings': {
+                            type: 'linear', position: 'right',
+                            title: { display: true, text: '貯蓄(万円)', color: '#10b981', font: {size: 10} },
+                            grid: { display: false }
+                        },
+                        x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: {size: 9} } }
+                    }
+                }
+            });
+        }
+
+        function downloadCSV() {
+            const headers = [
+                '夫年齢', '妻年齢', '夫手取り', '妻手取り', '世帯収入', 
+                '基本生活費', '住居費', '教育費', '車・特別費', '総支出', 
+                '年間収支', '貯蓄残高', 'ライフイベント'
+            ];
+            const rows = simulationData.map(d => [
+                d.hAge, d.wAge, d.hNet, d.wNet, d.netInc, 
+                d.livingCostYear, d.housingCostYear, d.eduCost, d.carAndSpecialCost, d.totalExpense, 
+                d.balance, d.savings, `"${d.eventName}"`
+            ].join(','));
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const csvContent = headers.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+            
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "lifeplan_simulation_super_detailed.csv";
+            link.click();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
